@@ -1,35 +1,90 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Screen Recorder</title>
+    <title>Screen Capture</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @font-face {
+            font-family: 'SF Pro Display';
+            src: local('-apple-system');
+        }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .macos-window {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .source-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 1em;
+        }
+
+        .recording-dot {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .btn-transition {
+            transition: all 0.2s ease;
+        }
+
+        .btn-transition:active {
+            transform: scale(0.95);
+        }
+    </style>
 </head>
-<body class="bg-gray-100 p-8">
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen p-8">
     <div class="max-w-2xl mx-auto">
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h1 class="text-2xl font-bold mb-4">Screen Recorder</h1>
+        <div class="macos-window rounded-xl shadow-lg p-6 space-y-6">
+            <div class="flex items-center justify-between mb-6">
+                <h1 class="text-2xl font-semibold text-gray-800">Screen Capture</h1>
+                <div id="recordingStatus" class="hidden items-center space-x-2">
+                    <div class="recording-dot w-2 h-2 bg-red-500 rounded-full"></div>
+                    <span class="text-sm text-red-500 font-medium">Recording</span>
+                </div>
+            </div>
             
-            <div class="mb-4">
-                <label class="block text-sm font-medium mb-2">Select Source:</label>
-                <select id="videoSource" class="w-full p-2 border rounded">
-                    <option value="">Choose a window or screen</option>
-                </select>
-            </div>
+            <div class="space-y-4">
+                <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Source</label>
+                    <select id="videoSource" class="source-select w-full px-4 py-2.5 text-gray-700 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                        <option value="">Choose a window or screen</option>
+                    </select>
+                </div>
 
-            <div class="mb-4">
-                <video id="preview" class="w-full bg-black rounded" autoplay></video>
-            </div>
+                <div class="relative rounded-lg overflow-hidden bg-black/5 aspect-video">
+                    <video id="preview" class="w-full h-full object-cover" autoplay></video>
+                    <div id="previewPlaceholder" class="absolute inset-0 flex items-center justify-center text-gray-400">
+                        <span>Preview will appear here</span>
+                    </div>
+                </div>
 
-            <div class="flex space-x-4">
-                <button id="startBtn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600" disabled>
-                    Start Recording
-                </button>
-                <button id="pauseBtn" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600" disabled>
-                    Pause
-                </button>
-                <button id="stopBtn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" disabled>
-                    Stop
-                </button>
+                <div class="flex items-center space-x-4">
+                    <button id="startBtn" class="btn-transition flex-1 bg-blue-500 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Start Recording
+                    </button>
+                    <button id="pauseBtn" class="btn-transition bg-gray-100 text-gray-700 px-6 py-2.5 rounded-lg font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Pause
+                    </button>
+                    <button id="stopBtn" class="btn-transition bg-red-500 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        Stop
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -39,7 +94,6 @@
         let recordedChunks = [];
         let stream;
 
-        // Function to get video sources (window/screen)
         async function getVideoSources() {
             try {
                 const sources = await window.electronAPI.getVideoSources();
@@ -59,7 +113,6 @@
             }
         }
 
-        // Handle source selection
         async function handleSourceSelect(e) {
             const sourceId = e.target.value;
             if (!sourceId) return;
@@ -82,12 +135,12 @@
                 const preview = document.getElementById('preview');
                 preview.srcObject = stream;
                 document.getElementById('startBtn').disabled = false;
+                document.getElementById('previewPlaceholder').style.display = 'none';
             } catch (err) {
                 console.error('Error selecting source:', err);
             }
         }
 
-        // Start recording
         function startRecording() {
             recordedChunks = [];
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
@@ -99,12 +152,9 @@
             };
 
             mediaRecorder.onstop = async () => {
-                const blob = new Blob(recordedChunks, {
-                    type: 'video/webm'
-                });
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
                 const buffer = await blob.arrayBuffer();
                 
-                // Save the video using Electron's save dialog
                 const savedFilePath = await window.electronAPI.saveVideo(buffer);
                 if (savedFilePath) {
                     console.log('Video saved to', savedFilePath);
@@ -115,20 +165,21 @@
             document.getElementById('startBtn').disabled = true;
             document.getElementById('pauseBtn').disabled = false;
             document.getElementById('stopBtn').disabled = false;
+            document.getElementById('recordingStatus').style.display = 'flex';
         }
 
-        // Pause recording
         function pauseRecording() {
             if (mediaRecorder.state === 'recording') {
                 mediaRecorder.pause();
                 document.getElementById('pauseBtn').textContent = 'Resume';
+                document.getElementById('recordingStatus').classList.add('opacity-50');
             } else if (mediaRecorder.state === 'paused') {
                 mediaRecorder.resume();
                 document.getElementById('pauseBtn').textContent = 'Pause';
+                document.getElementById('recordingStatus').classList.remove('opacity-50');
             }
         }
 
-        // Stop recording and trigger save
         function stopRecording() {
             mediaRecorder.stop();
             stream.getTracks().forEach(track => track.stop());
@@ -136,15 +187,15 @@
             document.getElementById('pauseBtn').disabled = true;
             document.getElementById('stopBtn').disabled = true;
             document.getElementById('pauseBtn').textContent = 'Pause';
+            document.getElementById('recordingStatus').style.display = 'none';
+            document.getElementById('previewPlaceholder').style.display = 'flex';
         }
 
-        // Event listeners
         document.getElementById('videoSource').addEventListener('change', handleSourceSelect);
         document.getElementById('startBtn').addEventListener('click', startRecording);
         document.getElementById('pauseBtn').addEventListener('click', pauseRecording);
         document.getElementById('stopBtn').addEventListener('click', stopRecording);
 
-        // Initial load of video sources
         getVideoSources();
     </script>
 </body>
