@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screen Recorder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold mb-4">Screen Recorder</h1>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium mb-2">Select Source:</label>
+                <select id="videoSource" class="w-full p-2 border rounded">
+                    <option value="">Choose a window or screen</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <video id="preview" class="w-full bg-black rounded" autoplay></video>
+            </div>
+
+            <div class="flex space-x-4">
+                <button id="startBtn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600" disabled>
+                    Start Recording
+                </button>
+                <button id="pauseBtn" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600" disabled>
+                    Pause
+                </button>
+                <button id="stopBtn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600" disabled>
+                    Stop
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let recordedChunks = [];
+        let stream;
+
+        // Function to get video sources (window/screen)
+        async function getVideoSources() {
+            try {
+                const sources = await window.electronAPI.getVideoSources();
+                const sourceSelect = document.getElementById('videoSource');
+                sourceSelect.innerHTML = '<option value="">Choose a window or screen</option>';
+
+                sources.forEach(source => {
+                    const option = document.createElement('option');
+                    option.value = source.id;
+                    option.text = source.name;
+                    sourceSelect.appendChild(option);
+                });
+
+                console.log('Sources found:', sources.length);
+            } catch (error) {
+                console.error('Error getting sources:', error);
+            }
+        }
+
+        // Handle source selection
+        async function handleSourceSelect(e) {
+            const sourceId = e.target.value;
+            if (!sourceId) return;
+
+            try {
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                }
+
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: {
+                        mandatory: {
+                            chromeMediaSource: 'desktop',
+                            chromeMediaSourceId: sourceId
+                        }
+                    }
+                });
+
+                const preview = document.getElementById('preview');
+                preview.srcObject = stream;
+                document.getElementById('startBtn').disabled = false;
+            } catch (err) {
+                console.error('Error selecting source:', err);
+            }
+        }
+
+        // Start recording
+        function startRecording() {
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    recordedChunks.push(e.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(recordedChunks, {
+                    type: 'video/webm'
+                });
+                const buffer = await blob.arrayBuffer();
+                
+                // Save the video using Electron's save dialog
+                const savedFilePath = await window.electronAPI.saveVideo(buffer);
+                if (savedFilePath) {
+                    console.log('Video saved to', savedFilePath);
+                }
+            };
+
+            mediaRecorder.start();
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = false;
+        }
+
+        // Pause recording
+        function pauseRecording() {
+            if (mediaRecorder.state === 'recording') {
+                mediaRecorder.pause();
+                document.getElementById('pauseBtn').textContent = 'Resume';
+            } else if (mediaRecorder.state === 'paused') {
+                mediaRecorder.resume();
+                document.getElementById('pauseBtn').textContent = 'Pause';
+            }
+        }
+
+        // Stop recording and trigger save
+        function stopRecording() {
+            mediaRecorder.stop();
+            stream.getTracks().forEach(track => track.stop());
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('pauseBtn').textContent = 'Pause';
+        }
+
+        // Event listeners
+        document.getElementById('videoSource').addEventListener('change', handleSourceSelect);
+        document.getElementById('startBtn').addEventListener('click', startRecording);
+        document.getElementById('pauseBtn').addEventListener('click', pauseRecording);
+        document.getElementById('stopBtn').addEventListener('click', stopRecording);
+
+        // Initial load of video sources
+        getVideoSources();
+    </script>
+</body>
+</html>
