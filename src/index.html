@@ -5,6 +5,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background: transparent;
+        }
+        
         @font-face {
             font-family: 'SF Pro Display';
             src: local('-apple-system');
@@ -19,6 +31,14 @@
             background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .draggable {
+            -webkit-app-region: drag;
+        }
+
+        .non-draggable {
+            -webkit-app-region: no-drag;
         }
 
         .source-select {
@@ -46,44 +66,55 @@
         .btn-transition:active {
             transform: scale(0.95);
         }
+
+        select, button {
+            -webkit-app-region: no-drag;
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen p-8">
-    <div class="max-w-2xl mx-auto">
-        <div class="macos-window rounded-xl shadow-lg p-6 space-y-6">
-            <div class="flex items-center justify-between mb-6">
-                <h1 class="text-2xl font-semibold text-gray-800">Screen Capture</h1>
-                <div id="recordingStatus" class="hidden items-center space-x-2">
-                    <div class="recording-dot w-2 h-2 bg-red-500 rounded-full"></div>
-                    <span class="text-sm text-red-500 font-medium">Recording</span>
-                </div>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="relative">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Source</label>
-                    <select id="videoSource" class="source-select w-full px-4 py-2.5 text-gray-700 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
-                        <option value="">Choose a window or screen</option>
-                    </select>
-                </div>
-
-                <div class="relative rounded-lg overflow-hidden bg-black/5 aspect-video">
-                    <video id="preview" class="w-full h-full object-cover" autoplay></video>
-                    <div id="previewPlaceholder" class="absolute inset-0 flex items-center justify-center text-gray-400">
-                        <span>Preview will appear here</span>
+<body class="bg-transparent">
+    <div class="h-screen flex items-center justify-center">
+        <div class="w-[640px]">
+            <div class="macos-window rounded-xl shadow-lg">
+                <!-- Window Controls -->
+                <div class="draggable flex items-center justify-between p-4 border-b border-gray-200/50">
+                    <div class="flex space-x-2">
+                        <button onclick="window.electronAPI.windowControls('close')" class="non-draggable w-3 h-3 rounded-full bg-red-500 hover:bg-red-600"></button>
+                        <button onclick="window.electronAPI.windowControls('minimize')" class="non-draggable w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-600"></button>
+                    </div>
+                    <div id="recordingStatus" class="hidden items-center space-x-2">
+                        <div class="recording-dot w-2 h-2 bg-red-500 rounded-full"></div>
+                        <span class="text-sm text-red-500 font-medium">Recording</span>
                     </div>
                 </div>
 
-                <div class="flex items-center space-x-4">
-                    <button id="startBtn" class="btn-transition flex-1 bg-blue-500 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                        Start Recording
-                    </button>
-                    <button id="pauseBtn" class="btn-transition bg-gray-100 text-gray-700 px-6 py-2.5 rounded-lg font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                        Pause
-                    </button>
-                    <button id="stopBtn" class="btn-transition bg-red-500 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-                        Stop
-                    </button>
+                <!-- Main Content -->
+                <div class="p-6 space-y-4">
+                    <div class="relative">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Source</label>
+                        <select id="videoSource" class="source-select w-full px-4 py-2.5 text-gray-700 bg-white/50 border border-gray-200/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                            <option value="">Choose a window or screen</option>
+                        </select>
+                    </div>
+
+                    <div class="relative rounded-lg overflow-hidden bg-black/5 aspect-video">
+                        <video id="preview" class="w-full h-full object-cover" autoplay></video>
+                        <div id="previewPlaceholder" class="absolute inset-0 flex items-center justify-center text-gray-400">
+                            <span>Preview will appear here</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center space-x-4">
+                        <button id="startBtn" class="btn-transition flex-1 bg-blue-500 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            Start Recording
+                        </button>
+                        <button id="pauseBtn" class="btn-transition bg-gray-100 text-gray-700 px-6 py-2.5 rounded-lg font-medium hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            Pause
+                        </button>
+                        <button id="stopBtn" class="btn-transition bg-red-500 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            Stop
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
