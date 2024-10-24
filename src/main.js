@@ -92,12 +92,21 @@ ipcMain.handle('save-video', async (event, buffer) => {
   }
 });
 
-// Improved video source capture
-ipcMain.handle('get-video-sources', async () => {
+// Update the get-video-sources handler
+ipcMain.handle('get-video-sources', async (event, sourceType) => {
   try {
+    let types = ['screen', 'window'];
+    if (sourceType === 'screen') {
+      types = ['screen'];
+    } else if (sourceType === 'window') {
+      types = ['window'];
+    }
+    // Note: 'area' selection is typically handled on the renderer side,
+    // so we'll return all sources for 'area' type
+
     const sources = await desktopCapturer.getSources({
-      types: ['window', 'screen'],
-      thumbnailSize: { width: 1280, height: 720 },
+      types: types,
+      thumbnailSize: { width: 150, height: 150 },
       fetchWindowIcons: true
     });
 
