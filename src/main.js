@@ -1,6 +1,13 @@
 const { app, BrowserWindow, ipcMain, dialog, desktopCapturer, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const ffmpeg = require('fluent-ffmpeg');
+
+// Make sure to set the path to the ffmpeg binaries
+const ffmpegPath = require('ffmpeg-static').path;
+const ffprobePath = require('ffprobe-static').path;
+ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobePath);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -73,10 +80,10 @@ ipcMain.handle('save-video', async (event, buffer) => {
   try {
     const { filePath, canceled } = await dialog.showSaveDialog({
       buttonLabel: 'Save Recording',
-      defaultPath: `screen-recording-${new Date().toISOString()}.webm`,
+      defaultPath: `screen-recording-${new Date().toISOString()}.mp4`,
       properties: ['createDirectory', 'showOverwriteConfirmation'],
       filters: [
-        { name: 'WebM Video', extensions: ['webm'] }
+        { name: 'MP4 Video', extensions: ['mp4'] }
       ]
     });
 
@@ -84,7 +91,30 @@ ipcMain.handle('save-video', async (event, buffer) => {
       return null;
     }
 
-    await fs.promises.writeFile(filePath, Buffer.from(buffer));
+    // Save the buffer as a temporary file
+    const tempInputPath = path.join(app.getPath('temp'), 'temp_recording_input');
+    await fs.promises.writeFile(tempInputPath, Buffer.from(buffer));
+
+    // Convert to MP4 using ffmpeg
+    await new Promise((resolve, reject) => {
+      ffmpeg(tempInputPath)
+        .outputOptions([
+          '-c:v', 'libx264',
+          '-preset', 'fast',
+          '-crf', '23',
+          '-c:a', 'aac',
+          '-b:a', '128k',
+          '-movflags', '+faststart'
+        ])
+        .toFormat('mp4')
+        .on('end', () => resolve())
+        .on('error', (err) => reject(err))
+        .save(filePath);
+    });
+
+    // Delete the temporary input file
+    await fs.promises.unlink(tempInputPath);
+
     return filePath;
   } catch (error) {
     console.error('Error saving video:', error);

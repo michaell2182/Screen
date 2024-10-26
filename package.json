@@ -3,7 +3,7 @@
   "productName": "screen",
   "version": "1.0.0",
   "description": "My Electron application description",
-"main": "src/main.js",
+  "main": "src/main.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
@@ -26,6 +26,9 @@
   "author": "michael",
   "license": "MIT",
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.1"
+    "electron-squirrel-startup": "^1.0.1",
+    "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0",
+    "fluent-ffmpeg": "^2.1.3"
   }
 }
