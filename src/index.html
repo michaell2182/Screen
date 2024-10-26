@@ -170,6 +170,16 @@
         </div>
     </div>
 
+    <!-- Replace the existing recordedVideoContainer div with this -->
+    <div id="recordedVideoContainer" class="hidden w-full h-full fixed inset-0 bg-black flex flex-col items-center justify-center">
+        <video id="recordedVideo" class="max-w-full max-h-[calc(100%-60px)]"></video>
+        <div class="w-full max-w-3xl mt-4 px-4 flex items-center justify-between">
+            <button id="playPauseBtn" class="text-white bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded">Play</button>
+            <input type="range" id="videoProgress" class="w-1/2" min="0" max="100" value="0">
+            <button id="closeVideoBtn" class="text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded">Close</button>
+        </div>
+    </div>
+
     <script>
         let mediaRecorder;
         let recordedChunks = [];
@@ -234,14 +244,8 @@
                 }
             };
 
-            mediaRecorder.onstop = async () => {
-                const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                const buffer = await blob.arrayBuffer();
-                
-                const savedFilePath = await window.electronAPI.saveVideo(buffer);
-                if (savedFilePath) {
-                    console.log('Video saved to', savedFilePath);
-                }
+            mediaRecorder.onstop = () => {
+                displayRecordedVideo();
             };
 
             mediaRecorder.start();
@@ -273,7 +277,53 @@
             document.getElementById('pauseBtn').textContent = 'Pause';
             document.getElementById('recordingStatus').classList.remove('flex');
             document.getElementById('recordingStatus').classList.add('hidden');
-            document.getElementById('previewPlaceholder').style.display = 'flex';
+        }
+
+        function displayRecordedVideo() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const videoURL = window.electronAPI.createObjectURL(blob);
+            
+            const recordedVideo = document.getElementById('recordedVideo');
+            recordedVideo.src = videoURL;
+            
+            const recordedVideoContainer = document.getElementById('recordedVideoContainer');
+            recordedVideoContainer.classList.remove('hidden');
+            
+            // Hide the main content
+            document.querySelector('.h-screen').classList.add('hidden');
+
+            // Set up custom video controls
+            setupVideoControls();
+        }
+
+        function setupVideoControls() {
+            const video = document.getElementById('recordedVideo');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const progressBar = document.getElementById('videoProgress');
+
+            playPauseBtn.addEventListener('click', togglePlayPause);
+            video.addEventListener('timeupdate', updateProgressBar);
+            progressBar.addEventListener('input', seekVideo);
+
+            function togglePlayPause() {
+                if (video.paused) {
+                    video.play();
+                    playPauseBtn.textContent = 'Pause';
+                } else {
+                    video.pause();
+                    playPauseBtn.textContent = 'Play';
+                }
+            }
+
+            function updateProgressBar() {
+                const progress = (video.currentTime / video.duration) * 100;
+                progressBar.value = progress;
+            }
+
+            function seekVideo() {
+                const time = (progressBar.value / 100) * video.duration;
+                video.currentTime = time;
+            }
         }
 
         document.getElementById('videoSource').addEventListener('change', handleSourceSelect);
@@ -314,6 +364,32 @@
 
         // Initially hide the source select dropdown
         document.getElementById('videoSource').style.display = 'none';
+
+        document.getElementById('closeVideoBtn').addEventListener('click', closeRecordedVideo);
+
+        function closeRecordedVideo() {
+            const recordedVideoContainer = document.getElementById('recordedVideoContainer');
+            recordedVideoContainer.classList.add('hidden');
+            
+            // Show the main content
+            document.querySelector('.h-screen').classList.remove('hidden');
+            
+            // Reset the video source
+            const recordedVideo = document.getElementById('recordedVideo');
+            recordedVideo.src = '';
+            recordedVideo.pause();
+            
+            // Reset play/pause button
+            document.getElementById('playPauseBtn').textContent = 'Play';
+            
+            // Clear recorded chunks
+            recordedChunks = [];
+            
+            // Reset the preview
+            document.getElementById('previewPlaceholder').style.display = 'flex';
+            const preview = document.getElementById('preview');
+            preview.srcObject = null;
+        }
     </script>
 </body>
 </html>

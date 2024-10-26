@@ -5,5 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getVideoSources: (sourceType) => ipcRenderer.invoke('get-video-sources', sourceType),
 
   // Save recorded video using IPC
-  saveVideo: (blob) => ipcRenderer.invoke('save-video', blob)
+  saveVideo: (blob) => ipcRenderer.invoke('save-video', blob),
+
+  createObjectURL: (blob) => URL.createObjectURL(blob)
 });

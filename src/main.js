@@ -1,13 +1,5 @@
-const { app, BrowserWindow, ipcMain, dialog, desktopCapturer, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer } = require('electron');
 const path = require('path');
-const fs = require('fs');
-const ffmpeg = require('fluent-ffmpeg');
-
-// Make sure to set the path to the ffmpeg binaries
-const ffmpegPath = require('ffmpeg-static').path;
-const ffprobePath = require('ffprobe-static').path;
-ffmpeg.setFfmpegPath(ffmpegPath);
-ffmpeg.setFfprobePath(ffprobePath);
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -72,53 +64,6 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
-  }
-});
-
-// Enhanced video saving with error handling
-ipcMain.handle('save-video', async (event, buffer) => {
-  try {
-    const { filePath, canceled } = await dialog.showSaveDialog({
-      buttonLabel: 'Save Recording',
-      defaultPath: `screen-recording-${new Date().toISOString()}.mp4`,
-      properties: ['createDirectory', 'showOverwriteConfirmation'],
-      filters: [
-        { name: 'MP4 Video', extensions: ['mp4'] }
-      ]
-    });
-
-    if (canceled || !filePath) {
-      return null;
-    }
-
-    // Save the buffer as a temporary file
-    const tempInputPath = path.join(app.getPath('temp'), 'temp_recording_input');
-    await fs.promises.writeFile(tempInputPath, Buffer.from(buffer));
-
-    // Convert to MP4 using ffmpeg
-    await new Promise((resolve, reject) => {
-      ffmpeg(tempInputPath)
-        .outputOptions([
-          '-c:v', 'libx264',
-          '-preset', 'fast',
-          '-crf', '23',
-          '-c:a', 'aac',
-          '-b:a', '128k',
-          '-movflags', '+faststart'
-        ])
-        .toFormat('mp4')
-        .on('end', () => resolve())
-        .on('error', (err) => reject(err))
-        .save(filePath);
-    });
-
-    // Delete the temporary input file
-    await fs.promises.unlink(tempInputPath);
-
-    return filePath;
-  } catch (error) {
-    console.error('Error saving video:', error);
-    throw error;
   }
 });
 
